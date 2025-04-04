@@ -1,0 +1,1 @@
+ /Users/adilet_orozaliev/VS_Code/exchange_program_flutter/front/.dart_tool/flutter_build/9f0cd2afdaed939e777f106a5923f446/native_assets.json: 
