@@ -313,17 +313,6 @@ class _EventsScreenState extends State<EventsScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('События'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
-          ),
-        ],
-      ),
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
         child: SafeArea(

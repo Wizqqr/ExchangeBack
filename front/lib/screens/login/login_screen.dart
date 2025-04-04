@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import '../../components/buttons/custom_button.dart';
 import '../../services/api_service.dart';
 import '../../models/user.dart';
-import '../../logo/custom_logo.dart'; // Import the custom logo widget
+import '../../logo/custom_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return CupertinoAlertDialog(
       title: const Text('Восстановление пароля'),
       content: Padding(
-        padding: const EdgeInsets.only(top: 16.0), // Add padding from the title
+        padding: const EdgeInsets.only(top: 16.0),
         child: CupertinoTextField(
           controller: emailController,
           style: const TextStyle(color: Colors.white),
@@ -335,67 +335,83 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Убираем AppBar
+      // Включаем параметр для корректного обработки клавиатуры
+      resizeToAvoidBottomInset: true,
       body: AnimatedBackground(
         child: Stack(
           children: [
-            SafeArea( // Добавляем SafeArea
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  bottom: 16.0,
-                  top: 100.0, // Добавляем больший отступ сверху
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start, // Change from center to start
-                  children: [
-                    const SizedBox(height: 50.0), // Add some space at the top
-                    const CustomLogo(), // Use the custom logo widget
-                    const SizedBox(height: 32.0),
-                    _buildUsernameField(),
-                    const SizedBox(height: 16.0),
-                    _buildPasswordField(),
-                    const SizedBox(height: 32.0),
-                    SizedBox(
-                      width: double.infinity,
-                      child: CustomButton(
-                        onPressed: () async {
-                          _showLoadingIndicator();
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    // Позволяем прокручивать контент при любой ориентации
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        // Устанавливаем минимальную высоту равной высоте экрана
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 20.0,
+                          ),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 50.0),
+                              const CustomLogo(),
+                              const SizedBox(height: 32.0),
+                              _buildUsernameField(),
+                              const SizedBox(height: 16.0),
+                              _buildPasswordField(),
+                              const SizedBox(height: 32.0),
+                              SizedBox(
+                                width: double.infinity,
+                                child: CustomButton(
+                                  onPressed: () async {
+                                    _showLoadingIndicator();
 
-                          User? user = await ApiService.authenticate(
-                            usernameController.text.trim(),
-                            passwordController.text.trim(),
-                          );
+                                    User? user = await ApiService.authenticate(
+                                      usernameController.text.trim(),
+                                      passwordController.text.trim(),
+                                    );
 
-                          _hideLoadingIndicator();
+                                    _hideLoadingIndicator();
 
-                          if (user != null) {
-                            UserManager().setCurrentUser(user);
-                            await ApiService.getAccessJWT(user.username, passwordController.text.trim());
-                            await ApiService.isSuperUser(user.username);
-                            Navigator.pushReplacementNamed(context, '/main');
-                          } else {
-                            setState(() {
-                              _loginFailed = true;
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Ошибка входа')),
-                            );
-                          }
-                        },
-                        text: 'Войти',
+                                    if (user != null) {
+                                      UserManager().setCurrentUser(user);
+                                      await ApiService.getAccessJWT(user.username, passwordController.text.trim());
+                                      await ApiService.isSuperUser(user.username);
+                                      Navigator.pushReplacementNamed(context, '/main');
+                                    } else {
+                                      setState(() {
+                                        _loginFailed = true;
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Ошибка входа')),
+                                      );
+                                    }
+                                  },
+                                  text: 'Войти',
+                                ),
+                              ),
+                              const SizedBox(height: 16.0),
+                              TextButton(
+                                onPressed: () {
+                                  _showPasswordResetDialog(context);
+                                },
+                                child: const Text('Забыли пароль?'),
+                              ),
+                              // Добавляем дополнительное пространство для возможности скролла
+                              SizedBox(height: MediaQuery.of(context).viewInsets.bottom)
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16.0),
-                    TextButton(
-                      onPressed: () {
-                        _showPasswordResetDialog(context);
-                      },
-                      child: const Text('Забыли пароль?'),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
             if (_isLoading)

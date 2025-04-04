@@ -106,62 +106,83 @@ class _MainTabScreenState extends State<MainTabScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final username = UserManager().getCurrentUser();
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Обменник отчеты'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: IconButton(
-              icon: Icon(Icons.logout, color: Colors.red),
-              onPressed: () {
-                showLogoutConfirmationDialog(context);
-              },
-            ),
-          ),
-        ],
-      ),
-      extendBodyBehindAppBar: true,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Theme.of(context).primaryColor,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Главная',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'События',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.money_sharp),
-            label: 'Касса',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on),
-            label: 'Валюты',
-          ),
-        ],
-      ),
-    );
+  // Обновленный AppBar в MainTabScreen
+
+@override
+Widget build(BuildContext context) {
+  final username = UserManager().getCurrentUser();
+  
+  // Получаем заголовок в зависимости от выбранной вкладки
+  String title = 'Обменник отчеты';
+  switch (_selectedIndex) {
+    case 0:
+      title = 'Обменник отчеты';
+      break;
+    case 1:
+      title = 'События';
+      break;
+    case 2:
+      title = 'Касса';
+      break;
+    case 3:
+      title = 'Валюты';
+      break;
   }
+  
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(title),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      // Убираем автоматическую кнопку назад
+      automaticallyImplyLeading: false,
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          child: IconButton(
+            icon: Icon(Icons.logout, color: Colors.red),
+            onPressed: () {
+              showLogoutConfirmationDialog(context);
+            },
+          ),
+        ),
+      ],
+    ),
+    extendBodyBehindAppBar: true,
+    body: IndexedStack(
+      index: _selectedIndex,
+      children: _screens,
+    ),
+    bottomNavigationBar: BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Theme.of(context).primaryColor,
+      selectedItemColor: Colors.white,
+      unselectedItemColor: Colors.white70,
+      currentIndex: _selectedIndex,
+      onTap: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'Главная',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.list),
+          label: 'События',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.money_sharp),
+          label: 'Касса',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.monetization_on),
+          label: 'Валюты',
+        ),
+      ],
+    ),
+  );
+}
 }
