@@ -9,9 +9,9 @@ import '../../components/buttons/icon_toggle_button.dart';
 import '../../components/dropdowns/custom_dropdown.dart';
 import '../../components/inputs/custom_text_field.dart';
 import '../../components/loading/shimmer_loading.dart';
-import '../drawer/app_drawer.dart';
 import '../../services/api_service.dart';
 import 'package:exchanger/components/background/animated_background.dart';
+import 'package:exchanger/services/event_bus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,6 +39,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Timer? _scrollTimer;
   final GlobalKey _scrollKey = GlobalKey();
   double _singleCycleWidth = 0.0;
+
+
 
   @override
   void initState() {
@@ -272,35 +274,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  Future<void> _submitEvent() async {
-    if (_selectedCurrency == 'Валюта' || 
-        _quantityController.text.isEmpty || 
-        _rateController.text.isEmpty) {
-      _showPlatformDialog('Заполните все поля');
+  
+Future<void> _submitEvent() async {
+  if (_selectedCurrency == 'Валюта' || 
+      _quantityController.text.isEmpty || 
+      _rateController.text.isEmpty) {
+    _showPlatformDialog('Заполните все поля');
+    return;
+  }
+
+  try {
+    final type = _isUpSelected ? 'Продажа' : _isDownSelected ? 'Покупка' : '';
+    if (type.isEmpty) {
+      _showPlatformDialog('Выберите тип операции (продажа/покупка)');
       return;
     }
 
-    try {
-      final type = _isUpSelected ? 'Продажа' : _isDownSelected ? 'Покупка' : '';
-      if (type.isEmpty) {
-        _showPlatformDialog('Выберите тип операции (продажа/покупка)');
-        return;
-      }
+    await ApiService.addEvent(
+      type,
+      _selectedCurrency,
+      double.parse(_quantityController.text),
+      double.parse(_rateController.text),
+      double.parse(_totalController.text),
+    );
 
-      await ApiService.addEvent(
-        type,
-        _selectedCurrency,
-        double.parse(_quantityController.text),
-        double.parse(_rateController.text),
-        double.parse(_totalController.text),
-      );
-
-      _clearFields();
-      _showPlatformDialog('Событие успешно добавлено');
-    } catch (e) {
-      _showPlatformDialog('Ошибка: $e');
-    }
+    _clearFields();
+    _showPlatformDialog('Событие успешно добавлено');
+    
+    // Отправляем событие для обновления экрана кассы
+    EventBus.fire(RefreshCashEvent());
+  } catch (e) {
+    _showPlatformDialog('Ошибка: $e');
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -308,129 +314,94 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       future: _initFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Обменник отчеты'),
-            ),
-            body: const Center(
-              child: CircularProgressIndicator(),
-            ),
+          return const Center(
+            child: CircularProgressIndicator(),
           );
         } else if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Обменник отчеты'),
-            ),
-            body: Center(
-              child: Text('Ошибка: ${snapshot.error}'),
-            ),
+          return Center(
+            child: Text('Ошибка: ${snapshot.error}'),
           );
         } else {
-          return Scaffold(
-            appBar: AppBar(
-              leading: Builder(
-                builder: (BuildContext context) {
-                  return IconButton(
-                    icon: Icon(Icons.menu),
-                    onPressed: () {
-                      Scaffold.of(context).openDrawer();
-                    },
-                  );
-                },
-              ),
-              title: Text('Обменник отчеты'),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-            ),
-            drawer: Builder(
-              builder: (context) => AppDrawer(
-                onDrawerOpened: () {
-                  _dropdownKey.currentState?.closeDropdown();
-                },
-              ),
-            ),
-            extendBodyBehindAppBar: true,
-            body: AnimatedBackground(
-              child: SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        if (_isInitialLoading) 
-                          Column(
-                            children: List.generate(
-                              5,
-                              (index) => Padding(
-                                padding: EdgeInsets.only(bottom: 16),
-                                child: ShimmerLoading(
-                                  width: double.infinity,
-                                  height: 50,
-                                ),
+          return AnimatedBackground(
+            child: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      if (_isInitialLoading) 
+                        Column(
+                          children: List.generate(
+                            5,
+                            (index) => Padding(
+                              padding: EdgeInsets.only(bottom: 16),
+                              child: ShimmerLoading(
+                                width: double.infinity,
+                                height: 50,
                               ),
                             ),
-                          )
-                        else
-                          Column(
-                            children: [
-                              SizedBox(height: 16),
-                              _buildScrollingRates(),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 24),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    IconToggleButton(
-                                      icon: Icons.arrow_upward,
-                                      isSelected: _isUpSelected,
-                                      onPressed: _selectUp,
-                                      selectedColor: Theme.of(context).primaryColor, 
-                                    ),
-                                    SizedBox(width: 16),
-                                    IconToggleButton(
-                                      icon: Icons.arrow_downward,
-                                      isSelected: _isDownSelected,
-                                      onPressed: _selectDown,
-                                      selectedColor: Theme.of(context).primaryColor, 
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              CustomDropdown(
-                                key: _dropdownKey,
-                                value: _selectedCurrency,
-                                items: _currencies,
-                                onChanged: (String? newValue) {
-                                  String lowerCurrency = newValue!.toLowerCase();
-                                  setState(() {
-                                    _selectedCurrency = newValue;
-                                    if (_selectedCurrency != 'Валюта') {
-                                      _rateController.text = _rates.keys.contains(lowerCurrency) ? _rateController.text = double.parse(_rates[lowerCurrency]).toStringAsFixed(2) : _rateController.text = '';
-                                      _calculateTotal();
-                                    }else{
-                                      _rateController.text = '';
-                                      _calculateTotal();
-                                    }
-                                  });
-                                },
-                                onMenuOpened: _fetchCurrencies,
-                              ),
-                              SizedBox(height: 16),
-                              _buildInputFields(context), 
-                              SizedBox(height: 16),
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 24),
-                                child: CustomButton(
-                                  onPressed: _submitEvent,
-                                  text: 'Добавить',
-                                ),
-                              ),
-                            ],
                           ),
-                      ],
-                    ),
+                        )
+                      else
+                        Column(
+                          children: [
+                            SizedBox(height: 16),
+                            _buildScrollingRates(),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconToggleButton(
+                                    icon: Icons.arrow_upward,
+                                    isSelected: _isUpSelected,
+                                    onPressed: _selectUp,
+                                    selectedColor: Theme.of(context).primaryColor, 
+                                  ),
+                                  SizedBox(width: 16),
+                                  IconToggleButton(
+                                    icon: Icons.arrow_downward,
+                                    isSelected: _isDownSelected,
+                                    onPressed: _selectDown,
+                                    selectedColor: Theme.of(context).primaryColor, 
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            CustomDropdown(
+                              key: _dropdownKey,
+                              value: _selectedCurrency,
+                              items: _currencies,
+                              onChanged: (String? newValue) {
+                                String lowerCurrency = newValue!.toLowerCase();
+                                setState(() {
+                                  _selectedCurrency = newValue;
+                                  if (_selectedCurrency != 'Валюта') {
+                                    _rateController.text = _rates.keys.contains(lowerCurrency) ? _rateController.text = double.parse(_rates[lowerCurrency]).toStringAsFixed(2) : _rateController.text = '';
+                                    _calculateTotal();
+                                  }else{
+                                    _rateController.text = '';
+                                    _calculateTotal();
+                                  }
+                                });
+                              },
+                              onMenuOpened: _fetchCurrencies,
+                            ),
+                            SizedBox(height: 16),
+                            _buildInputFields(context), 
+                            SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              child: CustomButton(
+                                onPressed: _submitEvent,
+                                text: 'Добавить',
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -440,7 +411,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },
     );
   }
-
   Widget _buildScrollingRates() {
     final List<String> currencies = ['RUB', 'USD', 'KZT', 'EUR', 'CNY', 'UZS', 'GBP', 'TRY'];
     final List<String> rates = currencies.map((currency) {

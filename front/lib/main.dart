@@ -1,8 +1,8 @@
 import 'package:exchanger/styles/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'screens/login/login_screen.dart';
-import 'screens/home/home_screen.dart';
 import 'screens/splash/splash_screen.dart';
+import 'package:exchanger/screens/main_tab_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,9 +20,11 @@ class MyApp extends StatelessWidget {
       routes: {
         '/splash': (context) => const SplashScreen(),
         '/': (context) => const LoginScreen(),
-        '/main': (context) => const HomeScreen(),
+        '/main': (context) => const MainTabScreen(),
       },
     );
   }
+
+  
 }
 
