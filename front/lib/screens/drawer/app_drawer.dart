@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import '../../models/user.dart';
 import '../events/events_screen.dart';
 import '../currencies/currencies_screen.dart';
+import '../currencies/currency_rates_screen.dart';
 import '../users/users_screen.dart';
 import '../cash_register/cash_screen.dart';
 
@@ -375,6 +376,31 @@ class _AppDrawerState extends State<AppDrawer> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => CurrenciesScreen()));
                 },
               ),
+
+              ListTile(
+                leading: Icon(Icons.currency_exchange),
+                title: Text('Курсы валют'),
+                onTap: () async {
+                    Navigator.pop(context);
+
+                    // Загрузка курсов с сервера или из home_screen
+                    final rates = await ApiService.getCurrencyRate();
+
+                    final updatedRates = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => CurrencyRatesScreen(rates: rates),
+                      ),
+                    );
+
+                    if (updatedRates != null) {
+                      // Сохраняем локально или обрабатываем по нужной логике
+                      // Например, можно прокинуть callback или использовать state management
+                      print('Обновлённые курсы: $updatedRates');
+                    }
+                },
+              ),
+
               if (_isSuperAdmin ?? false)
                 ListTile(
                   leading: Icon(Icons.delete),

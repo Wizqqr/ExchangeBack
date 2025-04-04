@@ -311,18 +311,28 @@ class ApiService {
     _superUserCache.clear();
   }
 
+  // static Future<Map<String, dynamic>> getCurrencyRate() async {
+  //   final response = await http.get(Uri.parse(_ratesUrl),
+  //       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_bearerKey'}
+  //   );
+  //   print(response.body);
+  //   if (response.statusCode == 200) {
+  //     final data = json.decode(response.body);
+  //     return data;
+  //   } else {
+  //     return {};
+  //   }
+  // }
+
   static Future<Map<String, dynamic>> getCurrencyRate() async {
-    final response = await http.get(Uri.parse(_ratesUrl),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_bearerKey'}
-    );
-    print(response.body);
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data;
-    } else {
-      return {};
-    }
+    return {
+        'usd': 89.5,
+        'eur': 96.3,
+        'rub': 1.14,
+        'kzt': 0.19,
+    };
   }
+
 
   static Future<void> getAccessJWT(String username, String password) async {
     final response = await http.post(Uri.parse('$_baseUrl/token'), 
