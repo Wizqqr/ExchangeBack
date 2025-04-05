@@ -191,6 +191,7 @@ def send_password_reset_email(user, reset_code):
 
 
 
+
 @csrf_exempt
 def confirm_email_view(request):
     if request.method == 'POST':
