@@ -5,6 +5,7 @@ class CustomDropdown extends StatefulWidget {
   final List<String> items;
   final ValueChanged<String?> onChanged;
   final VoidCallback? onMenuOpened;
+  final VoidCallback? onTap; 
 
   const CustomDropdown({
     super.key,
@@ -12,6 +13,7 @@ class CustomDropdown extends StatefulWidget {
     required this.items,
     required this.onChanged,
     this.onMenuOpened,
+    this.onTap
   });
 
   @override
@@ -39,6 +41,8 @@ class CustomDropdownState extends State<CustomDropdown> with SingleTickerProvide
       ),
     );
   }
+
+  
 
   @override
   void dispose() {
@@ -144,6 +148,17 @@ class CustomDropdownState extends State<CustomDropdown> with SingleTickerProvide
           _overlayEntry = null;
         }
       });
+    }
+  }
+
+  void openDropdown() {
+    if (!_isOpen) {
+      widget.onMenuOpened?.call();
+      setState(() {
+        _isOpen = true;
+      });
+      _overlayEntry = _createOverlayEntry();
+      Overlay.of(context).insert(_overlayEntry!);
     }
   }
 

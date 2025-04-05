@@ -1,3 +1,5 @@
+import 'package:exchanger/components/refreshable_state.dart';
+import 'package:exchanger/services/event_bus.dart';
 import 'package:flutter/material.dart';
 import 'package:exchanger/components/background/animated_background.dart';
 import '../../components/header_cell.dart';
@@ -5,6 +7,8 @@ import '../../components/table_cell.dart' as custom;
 import '../../components/loading/shimmer_loading.dart';
 import '../../services/api_service.dart';
 import 'package:exchanger/services/export_to_pdf.dart';
+import 'dart:async';
+
 
 class CashScreen extends StatefulWidget {
   const CashScreen({super.key});
@@ -13,11 +17,12 @@ class CashScreen extends StatefulWidget {
   State<CashScreen> createState() => _CashScreenState();
 }
 
-class _CashScreenState extends State<CashScreen> {
+class _CashScreenState extends State<CashScreen> with RefreshableState {
   bool _isLoading = true;
   List<Map<String, dynamic>> _cashReport = [];
   double _totalSum = 0.0;
   double _totalProfit = 0.0;
+  StreamSubscription? _subscription;
 
   final Map<String, String> _headerTitles = {
     'currency': 'Валюта',
@@ -34,23 +39,50 @@ class _CashScreenState extends State<CashScreen> {
   void initState() {
     super.initState();
     _fetchCashReport();
+    
+    // Подписываемся на события обновления
+    _subscription = EventBus().listen((event) {
+      if (event is RefreshCashEvent) {
+        refreshData();
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+  
+  @override
+  void refreshData() {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _fetchCashReport();
+      });
+    }
   }
 
   Future<void> _fetchCashReport() async {
     try {
       final events = await ApiService.fetchEvents();
       final report = _processEvents(events);
-      setState(() {
-        _cashReport = report;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _cashReport = report;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading cash report: $e')),
-      );
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading cash report: $e')),
+        );
+      }
     }
   }
 
@@ -170,11 +202,6 @@ class _CashScreenState extends State<CashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Касса'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
         child: SafeArea(
