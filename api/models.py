@@ -64,7 +64,6 @@ class User(models.Model):
     username = models.CharField(max_length=255, unique=True)
     email = models.EmailField(verbose_name='email address', max_length=255, unique=True)
     password = models.CharField(max_length=128)
-    phone = models.CharField(max_length=255, unique=True)
     is_superuser = models.BooleanField(default=False)
     reset_code = models.CharField(max_length=6, blank=True, null=True)  # Ensure this field exists
     email_confirmed = models.BooleanField(default=False)

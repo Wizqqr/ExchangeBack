@@ -269,7 +269,6 @@ class RegisterView(APIView):
             user.confirmation_code = confirmation_code
             user.save()
 
-            # Send the confirmation email
             send_confirmation_email(user, confirmation_code)
 
             return Response({'message': 'User registered, please confirm your email'}, status=status.HTTP_201_CREATED)

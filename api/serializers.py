@@ -6,18 +6,14 @@ from .models import Event, Currency, User
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'phone']  # Include 'phone' field
+        fields = ['username', 'email', 'password']  # Include 'phone' field
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        # Check if phone number is unique
-        if User.objects.filter(phone=validated_data.get('phone')).exists():
-            raise serializers.ValidationError("This phone number is already in use.")
 
         user = User(
             username=validated_data['username'],
             email=validated_data['email'],
-            phone=validated_data['phone'],  # Ensure phone number is included
         )
         user.set_password(validated_data['password'])
         user.save()
