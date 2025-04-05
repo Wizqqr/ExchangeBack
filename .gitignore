@@ -1,0 +1,38 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Секретные ключи и конфиденциальные файлы
+.env
+.env.*
+
+# База данных (если используется SQLite)
+db.sqlite3
+
+# Миграции
+*/migrations/*
+!*/migrations/__init__.py
+
+# Статические и медиа файлы
+/static/
+/media/
+
+# IDE файлы
+.idea/
+.vscode/
+
+# Логи
+*.log
+
+# Временные файлы
+*.pot
+*.pyc
+*.pyo
+
+# Docker файлы
+.docker/
+docker-compose.override.yml
+
+# Виртуальные окружения
+venv/
+.venv/
