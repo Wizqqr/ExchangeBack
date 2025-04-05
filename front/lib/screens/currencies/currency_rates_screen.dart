@@ -33,29 +33,41 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
          context: context,
          builder: (context) {
             return AlertDialog(
-               title: Text('Изменить курс для ${currency.toUpperCase()}'),
+               backgroundColor: Color(0xFF1E1E1E),
+               title: Text(
+                  'Изменить курс для ${currency.toUpperCase()}',
+                  style: TextStyle(color: Colors.white),
+               ),
                content: TextField(
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                      labelText: 'Новый курс',
+                     labelStyle: TextStyle(color: Colors.grey[400]),
                      border: OutlineInputBorder(),
+                     enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey[700]!),
+                     ),
+                     focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.lightBlueAccent),
+                     ),
                   ),
+                  style: TextStyle(color: Colors.white),
                   controller: TextEditingController(text: newRate),
                   onChanged: (value) => newRate = value,
                ),
                actions: [
                   TextButton(
                      onPressed: () => Navigator.pop(context),
-                     child: Text('Отмена'),
+                     child: Text('Отмена', style: TextStyle(color: Colors.grey[400])),
                   ),
-                  ElevatedButton(
+                  CustomButton(
                      onPressed: () {
                         setState(() {
                            editableRates[currency] = double.tryParse(newRate) ?? editableRates[currency]!;
                         });
                         Navigator.pop(context);
                      },
-                     child: Text('Сохранить'),
+                     text: 'Сохранить',
                   ),
                ],
             );
@@ -71,18 +83,39 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
          context: context,
          builder: (context) {
             return AlertDialog(
-               title: Text('Добавить валюту'),
+               backgroundColor: Color(0xFF1E1E1E),
+               title: Text('Добавить валюту', style: TextStyle(color: Colors.white)),
                content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                      TextField(
-                        decoration: InputDecoration(labelText: 'Название (например: usd)'),
+                        style: TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                           labelText: 'Название (например: usd)',
+                           labelStyle: TextStyle(color: Colors.grey[400]),
+                           enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[700]!),
+                           ),
+                           focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.lightBlueAccent),
+                           ),
+                        ),
                         onChanged: (value) => newCurrency = value.toLowerCase(),
                      ),
                      SizedBox(height: 16),
                      TextField(
+                        style: TextStyle(color: Colors.white),
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(labelText: 'Курс'),
+                        decoration: InputDecoration(
+                           labelText: 'Курс',
+                           labelStyle: TextStyle(color: Colors.grey[400]),
+                           enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[700]!),
+                           ),
+                           focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.lightBlueAccent),
+                           ),
+                        ),
                         onChanged: (value) => newRate = value,
                      ),
                   ],
@@ -90,16 +123,16 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                actions: [
                   TextButton(
                      onPressed: () => Navigator.pop(context),
-                     child: Text('Отмена'),
+                     child: Text('Отмена', style: TextStyle(color: Colors.grey[400])),
                   ),
-                  ElevatedButton(
+                  CustomButton(
                      onPressed: () {
                         setState(() {
                            editableRates[newCurrency] = double.tryParse(newRate) ?? 0;
                         });
                         Navigator.pop(context);
                      },
-                     child: Text('Добавить'),
+                     text: 'Добавить',
                   ),
                ],
             );
@@ -111,21 +144,23 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
       showDialog(
          context: context,
          builder: (context) => AlertDialog(
-            title: Text('Сбросить все курсы?'),
-            content: Text('Вы уверены, что хотите удалить все валюты и их курсы?'),
+            backgroundColor: Color(0xFF1E1E1E),
+            title: Text('Сбросить все курсы?', style: TextStyle(color: Colors.white)),
+            content: Text('Вы уверены, что хотите удалить все валюты и их курсы?',
+               style: TextStyle(color: Colors.grey[300])),
             actions: [
                TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Отмена'),
+                  child: Text('Отмена', style: TextStyle(color: Colors.grey[400])),
                ),
-               ElevatedButton(
+               CustomButton(
                   onPressed: () {
                      setState(() {
                         editableRates.clear();
                      });
                      Navigator.pop(context);
                   },
-                  child: Text('Сбросить'),
+                  text: 'Сбросить',
                ),
             ],
          ),
@@ -147,20 +182,23 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
          ..sort((a, b) => _sortAscending ? a.value.compareTo(b.value) : b.value.compareTo(a.value));
 
       return Scaffold(
+         backgroundColor: Color(0xFF121212),
          appBar: AppBar(
+            backgroundColor: Color(0xFF1E1E1E),
             centerTitle: true,
-            title: Text('Редактор курсов валют'),
+            title: Text('Редактор курсов валют', style: TextStyle(color: Colors.white)),
+            iconTheme: IconThemeData(color: Colors.white),
             actions: [
                IconButton(
-                  icon: Icon(Icons.delete_forever),
+                  icon: Icon(Icons.delete_forever, color: Colors.red[300]),
                   onPressed: _clearRates,
                ),
                IconButton(
-                  icon: Icon(Icons.add),
+                  icon: Icon(Icons.add, color: Colors.lightBlueAccent),
                   onPressed: _addCurrencyDialog,
                ),
                IconButton(
-                  icon: Icon(Icons.check),
+                  icon: Icon(Icons.check, color: Colors.greenAccent),
                   onPressed: _saveAndExit,
                ),
             ],
@@ -171,12 +209,24 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                child: Column(
                   children: [
                      TextField(
+                        style: TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                            hintText: 'Поиск валюты',
-                           prefixIcon: Icon(Icons.search),
+                           hintStyle: TextStyle(color: Colors.grey[500]),
+                           prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                            border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                            ),
+                           enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[700]!),
+                           ),
+                           focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.lightBlueAccent),
+                           ),
+                           fillColor: Color(0xFF2A2A2A),
+                           filled: true,
                         ),
                         onChanged: (value) {
                            setState(() {
@@ -188,28 +238,44 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                           Text('Валюта', style: TextStyle(fontWeight: FontWeight.bold)),
+                           Text('Валюта',
+                              style: TextStyle(
+                                 fontWeight: FontWeight.bold,
+                                 color: Colors.white,
+                              )
+                           ),
                            TextButton.icon(
                               onPressed: () {
                                  setState(() {
                                     _sortAscending = !_sortAscending;
                                  });
                               },
-                              icon: Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward),
-                              label: Text('Курс'),
+                              icon: Icon(
+                                 _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                 color: Colors.lightBlueAccent,
+                              ),
+                              label: Text(
+                                 'Курс',
+                                 style: TextStyle(color: Colors.lightBlueAccent)
+                              ),
                            ),
                         ],
                      ),
                      SizedBox(height: 8),
                      Expanded(
                         child: filteredRates.isEmpty
-                           ? Center(child: Text('Нет валют.'))
+                           ? Center(
+                               child: Text(
+                                  'Нет валют.',
+                                  style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                               )
+                           )
                            : ListView.builder(
                               itemCount: filteredRates.length,
                               itemBuilder: (context, index) {
                                  final entry = filteredRates[index];
                                  return Card(
-                                    color: Theme.of(context).cardColor,
+                                    color: Color(0xFF1E1E1E),
                                     shape: RoundedRectangleBorder(
                                        borderRadius: BorderRadius.circular(12),
                                     ),
@@ -218,6 +284,8 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                                     child: InkWell(
                                        borderRadius: BorderRadius.circular(12),
                                        onTap: () => _editRate(entry.key),
+                                       splashColor: Colors.lightBlueAccent.withOpacity(0.2),
+                                       highlightColor: Colors.lightBlueAccent.withOpacity(0.1),
                                        child: Padding(
                                           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
                                           child: Row(
@@ -231,12 +299,16 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                                                          style: TextStyle(
                                                             fontSize: isTablet ? 20 : 16,
                                                             fontWeight: FontWeight.w600,
+                                                            color: Colors.white,
                                                          ),
                                                       ),
                                                       SizedBox(height: 4),
                                                       Text(
                                                          'Обновлено вручную',
-                                                         style: TextStyle(fontSize: 12, color: Colors.grey),
+                                                         style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors.grey[400],
+                                                         ),
                                                       ),
                                                    ],
                                                 ),
@@ -248,7 +320,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                                                          style: TextStyle(
                                                             fontSize: isTablet ? 20 : 16,
                                                             fontWeight: FontWeight.bold,
-                                                            color: Colors.white,
+                                                            color: Colors.lightBlueAccent,
                                                          ),
                                                       ),
                                                    ],
