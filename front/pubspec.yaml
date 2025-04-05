@@ -38,6 +38,8 @@ dependencies:
   path_provider: ^2.1.5
   open_file: ^3.2.1
   flutter_secure_storage: ^9.2.2
+  introduction_screen: ^3.1.4
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
@@ -57,8 +59,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
+    - assets/onboarding_img/img.png
+    - assets/onboarding_img/img_1.png
+    - assets/onboarding_img/img_2.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,15 +1,17 @@
-# Created by https://www.toptal.com/developers/gitignore/api/django
-# Edit at https://www.toptal.com/developers/gitignore?templates=django
-
-### Django ###
+# === GLOBAL ===
+.DS_Store
+.idea/
+.vscode/
 *.log
-*.pot
 *.pyc
 __pycache__/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+
+backend/venv/
+backend/db.sqlite3
 
 # If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/
 # in your Git repository. Update and uncomment the following line accordingly.
@@ -19,6 +21,30 @@ media
 # Byte-compiled / optimized / DLL files
 *.py[cod]
 *$py.class
+
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/build/
+frontend/pubspec.lock
+frontend/ios/Flutter/Flutter.framework
+frontend/ios/Flutter/Flutter.podspec
+frontend/ios/.symlinks
+frontend/ios/Pods/
+frontend/ios/Runner.xcworkspace/
+frontend/ios/DerivedData/
+frontend/ios/.dart_tool/
+frontend/.idea/
+frontend/coverage/
+frontend/android/.gradle/
+frontend/android/app/debug/
+frontend/android/app/profile/
+frontend/android/app/release/
+frontend/web/.dart_tool/
+frontend/linux/
+frontend/macos/
+frontend/windows/
 
 # C extensions
 *.so
@@ -69,7 +95,11 @@ cover/
 
 # Translations
 *.mo
-
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
 # Django stuff:
 
 # Flask stuff:
@@ -97,7 +127,13 @@ ipython_config.py
 #   For a library or package, you might want to ignore these files since the code is
 #   intended to run in multiple environments; otherwise, check them in:
 # .python-version
-
+.dart_tool/
+build/
+*.dill
+*.apk
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
 #   However, in case of collaboration, if having platform-specific dependencies or dependencies
@@ -163,12 +199,13 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-.idea/
-.vscode/
+#.idea/
 
 # End of https://www.toptal.com/developers/gitignore/api/django
