@@ -287,6 +287,7 @@ class isSuperAdmin(APIView):
         return Response({"error": "Not superadmin"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 class testRenderResetTemplateUi(APIView):
     permission_classes = [AllowAny]
 
