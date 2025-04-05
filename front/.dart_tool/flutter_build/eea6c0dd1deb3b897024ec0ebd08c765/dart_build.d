@@ -1,1 +1,0 @@
- /Users/isamelsov/Desktop/Flutter_exchange_program/front/.dart_tool/flutter_build/eea6c0dd1deb3b897024ec0ebd08c765/dart_build_result.json: 
