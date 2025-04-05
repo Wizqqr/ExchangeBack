@@ -8,7 +8,7 @@ class ApiService {
   // static const String _baseUrl = 'BACKEND_DEPLOY_URL';
   // static const String _baseUrl = 'http://127.0.0.1:8000/';
   static const String _ratesUrl = 'https://data.fx.kg/api/v1/central';
-  static const String _baseUrl = 'http://127.0.0.1:8000/api/v1';
+  static const String _baseUrl = 'http://localhost:8000/api/v1';
   static const String _bearerKey = 'DATA_FX_KEY';
 
   static final Map<String, bool> _superUserCache = {};

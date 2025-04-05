@@ -238,12 +238,18 @@ class _EditEventDialogState extends State<EditEventDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     if (theme.isIOS) {
       return CupertinoAlertDialog(
         title: const Text('Редактировать запись'),
         content: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: _buildForm(context),
+          // Оборачиваем контент в SingleChildScrollView
+          child: SingleChildScrollView(
+            // Добавляем нижний отступ для прокрутки при появлении клавиатуры
+            padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset * 0.5 : 0),
+            child: _buildForm(context),
+          ),
         ),
         actions: [
           CupertinoDialogAction(
@@ -273,52 +279,56 @@ class _EditEventDialogState extends State<EditEventDialog> {
       );
     } else {
       return Dialog(
-        backgroundColor: Colors.grey[900],
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Редактировать запись',
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-              const SizedBox(height: 16),
-              _buildForm(context),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: SingleChildScrollView(
+            // Добавляем отступ для скролла при появлении клавиатуры
+            padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset * 0.5 : 0),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Отмена'),
+                  Text(
+                    'Редактировать запись',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
-                  SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (formKey.currentState!.validate()) {
-                        bool status = await _editEvent();
-                        if (status) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Запись успешно обновлена')),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Не удалось обновить запись')),
-                          );
-                        }
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Text('Сохранить'),
+                  const SizedBox(height: 16),
+                  _buildForm(context),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Отмена'),
+                      ),
+                      SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (formKey.currentState!.validate()) {
+                            bool status = await _editEvent();
+                            if (status) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Запись успешно обновлена')),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Не удалось обновить запись')),
+                              );
+                            }
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Text('Сохранить'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      );
+        );
     }
   }
 }

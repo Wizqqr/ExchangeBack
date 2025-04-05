@@ -298,6 +298,75 @@ class _AppDrawerState extends State<AppDrawer> {
     }
   }
 
+
+// Добавьте новый метод в класс _AppDrawerState
+
+Future<void> showLogoutConfirmationDialog(BuildContext context) async {
+  final theme = Theme.of(context);
+  
+  if (theme.isIOS) {
+    await showCupertinoDialog(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text('Выход из аккаунта'),
+          content: const Text('Вы уверены, что хотите выйти?'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Отмена'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                // Выполняем выход
+                ApiService.clearSuperUserCache();
+                UserManager().setCurrentUser(null);
+                Navigator.pushReplacementNamed(context, '/');
+              },
+              child: const Text('Выйти'),
+            ),
+          ],
+        );
+      },
+    );
+  } else {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Выход из аккаунта'),
+          content: Text('Вы уверены, что хотите выйти?'),
+          actions: [
+            TextButton(
+              child: Text('Отмена'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text('Выйти'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Выполняем выход
+                ApiService.clearSuperUserCache();
+                UserManager().setCurrentUser(null);
+                Navigator.pushReplacementNamed(context, '/');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Теперь замените обработчик нажатия на иконку выхода
+
+
+
   @override
   Widget build(BuildContext context) {
     widget.onDrawerOpened?.call();
@@ -330,9 +399,7 @@ class _AppDrawerState extends State<AppDrawer> {
                   child: IconButton(
                     icon: Icon(Icons.logout, color: Colors.red),
                     onPressed: () {
-                      ApiService.clearSuperUserCache();
-                      UserManager().setCurrentUser(null);
-                      Navigator.pushReplacementNamed(context, '/');
+                        showLogoutConfirmationDialog(context);
                     },
                   ),
                 ),
