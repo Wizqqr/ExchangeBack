@@ -481,7 +481,6 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildScrollingRates() {
-<<<<<<< HEAD
     final List<String> currencies = ['RUB', 'USD', 'KZT', 'EUR', 'CNY', 'UZS', 'GBP', 'TRY'];
 
     final List<String> rates = currencies.map((currency) {
@@ -499,23 +498,6 @@ class _HomeScreenState extends State<HomeScreen>
         }
 
         return '$currency: N/A';
-=======
-    final List<String> currencies = [
-      'RUB',
-      'USD',
-      'KZT',
-      'EUR',
-      'CNY',
-      'UZS',
-      'GBP',
-      'TRY'
-    ];
-    final List<String> rates = currencies.map((currency) {
-      final lowerCurrency = currency.toLowerCase();
-      return _rates.containsKey(lowerCurrency)
-          ? '$currency: ${double.parse(_rates[lowerCurrency]).toStringAsFixed(2)}'
-          : '$currency: N/A';
->>>>>>> main
     }).toList();
 
     final List<String> repeatedRates = [...rates, ...rates];
