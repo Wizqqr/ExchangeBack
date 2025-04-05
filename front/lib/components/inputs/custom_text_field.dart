@@ -6,7 +6,8 @@ class CustomTextField extends StatelessWidget {
   final String hintText;
   final bool readOnly;
   final Function(String)? onChanged;
-  final List<TextInputFormatter>? inputFormatters; // Add this line
+  final List<TextInputFormatter>? inputFormatters;
+  final TextInputType? keyboardType; // ← добавили это
 
   const CustomTextField({
     super.key,
@@ -14,7 +15,8 @@ class CustomTextField extends StatelessWidget {
     required this.hintText,
     this.readOnly = false,
     this.onChanged,
-    this.inputFormatters, // Add this line
+    this.inputFormatters,
+    this.keyboardType, // ← добавили это
   });
 
   @override
@@ -23,14 +25,20 @@ class CustomTextField extends StatelessWidget {
       width: double.infinity,
       child: TextField(
         controller: controller,
+        style: const TextStyle(
+          color: Colors.black87, 
+          fontSize: 16,
+        ),
         readOnly: readOnly,
-        keyboardType: TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: inputFormatters ?? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))], // Modify this line
+        keyboardType: keyboardType ?? TextInputType.text, // ← используем здесь
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           hintText: hintText,
+          filled: true,
+          fillColor: Colors.white, // Светлый фон
           border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.black, width: 1),
-            borderRadius: BorderRadius.circular(8.0),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
         ),
         onChanged: onChanged,

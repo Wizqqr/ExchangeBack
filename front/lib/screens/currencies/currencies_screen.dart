@@ -434,11 +434,6 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Валюты'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
         child: SafeArea(
