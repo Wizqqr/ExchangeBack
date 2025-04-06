@@ -5,40 +5,31 @@ import random
 import string
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import BaseUserManager  # Add this import
+from django.utils import timezone
 
-# Create your models here.
 class Event(models.Model):
     type = models.CharField(max_length=255)
     currency = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    date = models.CharField(max_length=5)  
+    date = models.DateField()
+    time = models.TimeField(default=timezone.now)  # ⬅ автоматически текущее время
     rate = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=10, decimal_places=2)
 
     def save(self, *args, **kwargs):
+        self.total = self.amount * self.rate  # автоматический расчет total
+        if not self.time:
+            self.time = timezone.now().time()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.type} - {self.currency} ({self.date})"
-    
+        return f"{self.type} - {self.currency} ({self.date} {self.time})"
+
     class Meta:
         db_table = 'events'
         verbose_name = 'Event'
         verbose_name_plural = 'Events'
         ordering = ['-date']
-
-class Currency(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-
-    def __str__(self):
-        return self.name
-    
-    class Meta:
-        db_table = 'currencies'
-        verbose_name = 'Currency'
-        verbose_name_plural = 'Currencies'
-        ordering = ['name']
-
 
 class UserManager(models.Manager):
     def get_by_natural_key(self, email):
@@ -58,7 +49,6 @@ class UserManager(models.Manager):
         extra_fields.setdefault('is_staff', True)
 
         return self.create_user(username, email, password, phone, confirmation_code, **extra_fields)
-
 
 class User(models.Model):
     username = models.CharField(max_length=255, unique=True)
@@ -97,7 +87,6 @@ class User(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.password.startswith(('pbkdf2_sha256$', 'bcrypt$', 'argon2')):
-            # Если пароль еще не захеширован, хешируем его
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
 
@@ -131,4 +120,43 @@ class User(models.Model):
 
     def check_password(self, raw_password):
         return make_password(raw_password) == self.password
+
+class Currency(models.Model):
+    name = models.CharField(max_length=10)
+    rate_to_som = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # цена от юзера
+
+    def __str__(self):
+        return self.name
+
+class UserCurrency(models.Model):
+    user = models.ForeignKey(User, related_name='currencies', on_delete=models.CASCADE)
+    currency = models.ForeignKey(Currency, related_name='user_rates', on_delete=models.CASCADE)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Значение по умолчанию
+    event_date = models.DateField(null=True, blank=True, default=timezone.now)  # Разрешаем null и устанавливаем значение по умолчанию
+    event_type = models.CharField(max_length=10, default='purchase')  # Значение по умолчанию
+    purchase_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    purchase_count = models.IntegerField(null=True, blank=True)
+    sale_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    sale_count = models.IntegerField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Вычисление покупки и продажи в зависимости от типа события
+        if self.event_type == 'purchase':
+            self.purchase_total = self.amount * self.rate
+            self.purchase_count = self.amount
+            self.sale_total = 0
+            self.sale_count = 0
+        elif self.event_type == 'sale':
+            self.sale_total = self.amount * self.rate
+            self.sale_count = self.amount
+            self.purchase_total = 0
+            self.purchase_count = 0
+        super().save(*args, **kwargs)
+
+    class Meta:
+        db_table = 'user_currencies'
+        verbose_name = 'User Currency'
+        verbose_name_plural = 'User Currencies'
+        unique_together = ('user', 'currency')
 

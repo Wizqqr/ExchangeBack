@@ -16,6 +16,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.shortcuts import render
 from .models import User
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import logout
 
 from .serializers import EventSerializer, CurrencySerializer, UserSerializer
 from twilio.rest import Client
@@ -189,9 +191,6 @@ def send_password_reset_email(user, reset_code):
 
     send_mail(subject, message, from_email, recipient_list, html_message=html_message)
 
-
-
-
 @csrf_exempt
 def confirm_email_view(request):
     if request.method == 'POST':
@@ -219,44 +218,78 @@ class ForgotPasswordAPI(APIView):
 
         try:
             user = User.objects.get(email=email)
-            reset_code = generate_confirmation_code()
-            user.reset_code = reset_code  # assuming you added reset_code field to your User model
+            reset_code = generate_confirmation_code()  # Генерируем код сброса
+            user.reset_code = reset_code
             user.save()
 
-            send_password_reset_email(user, reset_code)
+            send_password_reset_email(user, reset_code)  # Отправляем код на почту
 
             return Response({"message": "Password reset code sent to your email."}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class VerifyCodeAPI(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        reset_code = request.data.get('reset_code')
+
+        if not reset_code:
+            return Response({"message": "Reset code is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Ищем пользователя по коду сброса
+            user = User.objects.get(reset_code=reset_code)
+
+            # Сохраняем код сброса в сессии
+            request.session['reset_code'] = reset_code
+
+            return Response({"message": "Code is valid, you can now reset your password."}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"message": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
+
 class ResetPasswordAPI(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        reset_code = request.data.get('reset_code')
+        # Получаем новый пароль и его подтверждение
         new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
 
-        if not email or not reset_code or not new_password:
-            return Response({"message": "Email, reset code, and new password are required."},
+        # Проверяем, что оба пароля введены
+        if not new_password or not confirm_password:
+            return Response({"message": "New password and confirmation are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверяем, что пароли совпадают
+        if new_password != confirm_password:
+            return Response({"message": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Извлекаем код сброса из сессии пользователя
+        reset_code = request.session.get('reset_code')
+
+        if not reset_code:
+            return Response({"message": "Reset code not found. Please request a password reset again."},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = User.objects.get(email=email)
+            # Ищем пользователя с этим кодом сброса
+            user = User.objects.get(reset_code=reset_code)
 
-            # Проверяем, совпадает ли код сброса
-            if user.reset_code == reset_code:
-                user.set_password(new_password)  # Обновляем пароль
-                user.reset_code = None  # Очищаем код сброса
-                user.save()
+            # Обновляем пароль
+            user.set_password(new_password)
+            user.reset_code = None  # Очищаем код сброса после использования
+            user.save()  # Сохраняем изменения в базе данных
 
-                return Response({"message": "Password has been successfully reset."}, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
+            # Удаляем код сброса из сессии после успешного обновления
+            del request.session['reset_code']
+
+            return Response({"message": "Password has been successfully reset."}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
-            return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({"message": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -275,16 +308,17 @@ class RegisterView(APIView):
             return Response({'message': 'User registered, please confirm your email'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class UserAuthentication(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        username = request.data.get('username')
+        email = request.data.get('email')
         password = request.data.get('password')
+
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(email=email)
             if check_password(password, user.password):
-                # Generate token
                 refresh = RefreshToken.for_user(user)
                 return Response({
                     "message": "Authentication successful",
@@ -297,6 +331,15 @@ class UserAuthentication(APIView):
                 return Response({"error": "Invalid password"}, status=status.HTTP_400_BAD_REQUEST)
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class UserLogOut(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        logout(request)
+        messages.success(request, "You have been logged out successfully.")
+        return Response({"message": "Logged out successfully."}, status=200)
 
 class ConfirmEmailAPI(APIView):
     permission_classes = [AllowAny]
@@ -327,7 +370,6 @@ class ConfirmEmailAPI(APIView):
                 return Response({"message": "Invalid confirmation code."}, status=status.HTTP_400_BAD_REQUEST)
 
         except User.DoesNotExist:
-            # Если пользователь с таким email не найден
             return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
 
 

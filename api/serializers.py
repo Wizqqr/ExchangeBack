@@ -1,7 +1,16 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Event, Currency, User
+from .models import Event, Currency, User, UserCurrency
+from django.utils import timezone
+
+from rest_framework import serializers
+
+class UserCurrencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserCurrency
+        fields = ['user', 'currency', 'rate', 'amount', 'event_date', 'event_type',
+                  'purchase_total', 'purchase_count', 'sale_total', 'sale_count']
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,24 +27,40 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
-
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = '__all__'
-        read_only_fields = ('total',)
-
-    def validate(self, data):
-        data['total'] = data['amount'] * data['rate']
-        return data
+        read_only_fields = ['total']  # total будет вычисляться автоматически
 
     def create(self, validated_data):
-        return Event.objects.create(**validated_data)
+        amount = validated_data.get('amount')
+        rate = validated_data.get('rate')
+        validated_data['total'] = amount * rate
+
+        # если время не передано — берем текущее
+        if not validated_data.get('time'):
+            validated_data['time'] = timezone.now().time()
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Обновляем amount/rate => пересчитываем total
+        instance.type = validated_data.get('type', instance.type)
+        instance.currency = validated_data.get('currency', instance.currency)
+        instance.amount = validated_data.get('amount', instance.amount)
+        instance.date = validated_data.get('date', instance.date)
+        instance.time = validated_data.get('time', instance.time)
+        instance.rate = validated_data.get('rate', instance.rate)
+        instance.total = instance.amount * instance.rate
+        instance.save()
+        return instance
 
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
-        fields = '__all__'
+        fields = ['id', 'name', 'rate_to_som']
+
     
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

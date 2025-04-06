@@ -1,25 +1,17 @@
-from rest_framework import generics, status
-from rest_framework.response import Response
+from rest_framework import generics
 import logging
 from django.contrib.auth.hashers import check_password
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from .models import Event, Currency, User, UserCurrency
+from .serializers import EventSerializer, CurrencySerializer, UserSerializer, UserCurrencySerializer
 from django.shortcuts import render
-from .models import Event, Currency, User
-
-from .serializers import EventSerializer, CurrencySerializer, UserSerializer
-from twilio.rest import Client
-from rest_framework_simplejwt.tokens import RefreshToken
-import random
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
 logger = logging.getLogger(__name__)
-# Create your views here.
+import openpyxl
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
+from django.http import HttpResponse
 class EventList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Event.objects.all()
@@ -271,6 +263,254 @@ class ClearAll(APIView):
                 Event.objects.all().delete()
                 return Response({"message": "Clear successful"}, status=status.HTTP_200_OK)
         return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+
+class UserCurrencyList(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserCurrencySerializer
+
+    def get_queryset(self):
+        return UserCurrency.objects.filter(user=self.request.user)
+
+    def post(self, request, *args, **kwargs):
+        name = request.data.get('name')
+        rate_to_som = request.data.get('rate_to_som')
+        amount = request.data.get('amount')
+        event_date = request.data.get('event_date')
+        event_type = request.data.get('event_type')
+
+        if not name or not rate_to_som or not amount or not event_date or not event_type:
+            return Response({"error": "Не указано одно из обязательных полей (name, rate_to_som, amount, event_date, event_type)"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if event_type not in ['purchase', 'sale']:
+            return Response({"error": "Неверный тип события. Должно быть 'purchase' или 'sale'"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        currency, created = Currency.objects.get_or_create(name=name)
+
+        if created:
+            currency.rate_to_som = rate_to_som
+            currency.save()
+
+        existing_currency = UserCurrency.objects.filter(user=request.user, currency=currency).first()
+        if existing_currency:
+            return Response({"error": "Вы уже задали курс для этой валюты"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if event_type == 'purchase':
+            purchase_total = amount * rate_to_som
+            purchase_count = amount
+            sale_total = 0
+            sale_count = 0
+        elif event_type == 'sale':
+            sale_total = amount * rate_to_som
+            sale_count = amount
+            purchase_total = 0
+            purchase_count = 0
+
+        purchase_average = purchase_total / purchase_count if purchase_count > 0 else 0
+        sale_average = sale_total / sale_count if sale_count > 0 else 0
+        profit = sale_total - purchase_total
+
+        user_currency = UserCurrency(
+            user=request.user,
+            currency=currency,
+            rate=rate_to_som,
+            event_date=event_date,
+            event_type=event_type,
+            amount=amount,
+            purchase_total=purchase_total,
+            purchase_count=purchase_count,
+            sale_total=sale_total,
+            sale_count=sale_count
+        )
+        user_currency.save()
+
+        return Response(UserCurrencySerializer(user_currency).data, status=status.HTTP_201_CREATED)
+
+class UserCurrencyDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserCurrencySerializer
+
+    def get_queryset(self):
+        return UserCurrency.objects.filter(user=self.request.user)
+
+    def put(self, request, *args, **kwargs):
+        currency_id = kwargs.get('pk')
+        rate = request.data.get('rate')
+        amount = request.data.get('amount')
+        event_type = request.data.get('event_type')
+
+        if not rate or not amount or not event_type:
+            return Response({"error": "Не указаны все обязательные поля"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_currency = UserCurrency.objects.get(id=currency_id, user=request.user)
+            user_currency.rate = rate
+            user_currency.amount = amount
+            user_currency.event_type = event_type
+            user_currency.save()
+
+            if event_type == 'purchase':
+                user_currency.update_totals_and_profit(purchase_amount=amount)
+            elif event_type == 'sale':
+                user_currency.update_totals_and_profit(sale_amount=amount)
+
+            return Response(UserCurrencySerializer(user_currency).data, status=status.HTTP_200_OK)
+        except UserCurrency.DoesNotExist:
+            return Response({"error": "Курс валюты не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, *args, **kwargs):
+        currency_id = kwargs.get('pk')
+
+        try:
+            user_currency = UserCurrency.objects.get(id=currency_id, user=request.user)
+            user_currency.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except UserCurrency.DoesNotExist:
+            return Response({"error": "Курс валюты не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+class UserOwnedCurrenciesView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CurrencySerializer
+
+    def get_queryset(self):
+        return Currency.objects.filter(user_rates__user=self.request.user).distinct()
+
+
+class ExportUserCurrenciesView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        if not user.is_authenticated:
+            return HttpResponse('Неавторизован', status=401)
+
+        wb = Workbook()
+        ws = wb.active
+        big_font = Font(size=14)
+
+        headers = [
+            'Имя пользователя', 'Валюта', 'Курс', 'Дата события', 'Тип события', 'Количество',
+            'Сумма покупки', 'Количество покупок', 'Сумма продажи', 'Количество продаж'
+        ]
+        ws.append(headers)
+
+        for cell in ws[1]:
+            cell.font = big_font
+
+        user_currencies = UserCurrency.objects.filter(user=user)
+
+        for user_currency in user_currencies:
+            row = [
+                user.username,
+                user_currency.currency.name,
+                user_currency.rate,
+                user_currency.event_date.strftime('%Y-%m-%d %H:%M:%S') if user_currency.event_date else '',
+                user_currency.event_type,
+                user_currency.amount,
+                user_currency.purchase_total,
+                user_currency.purchase_count,
+                user_currency.sale_total,
+                user_currency.sale_count
+            ]
+            ws.append(row)
+
+            for cell in ws[ws.max_row]:
+                cell.font = big_font
+
+        # Устанавливаем минимальную ширину вручную
+        column_widths = {
+            'A': 22,
+            'B': 15,
+            'C': 10,
+            'D': 25,
+            'E': 18,
+            'F': 14,
+            'G': 18,
+            'H': 23,
+            'I': 18,
+            'J': 22,
+        }
+
+        for col_letter, width in column_widths.items():
+            ws.column_dimensions[col_letter].width = width
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="user_currencies.xlsx"'
+        wb.save(response)
+        return response
+
+class EventListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = EventSerializer
+
+    def get_queryset(self):
+        return Event.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        serializer = EventSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EventDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = EventSerializer
+
+    def get_queryset(self):
+        return Event.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        event = self.get_object()
+        serializer = EventSerializer(event, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        event = self.get_object()
+        event.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ExportEventsView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        wb = Workbook()
+        ws = wb.active
+        ws.append(['Тип', 'Валюта', 'Сумма', 'Дата', 'Время', 'Курс', 'Итого'])
+
+        events = Event.objects.all()
+
+        for event in events:
+            ws.append([
+                event.type,
+                event.currency,
+                float(event.amount),
+                event.date,
+                event.time.strftime("%H:%M:%S"),
+                float(event.rate),
+                float(event.total)
+            ])
+
+        # Устанавливаем ширину столбцов
+        ws.column_dimensions['A'].width = 20  # Тип
+        ws.column_dimensions['B'].width = 15  # Валюта
+        ws.column_dimensions['C'].width = 15  # Сумма
+        ws.column_dimensions['D'].width = 15  # Дата
+        ws.column_dimensions['E'].width = 15  # Время
+        ws.column_dimensions['F'].width = 10  # Курс
+        ws.column_dimensions['G'].width = 15  # Итого
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="events.xlsx"'
+        wb.save(response)
+        return response
+
 
 
 class isSuperAdmin(APIView):
