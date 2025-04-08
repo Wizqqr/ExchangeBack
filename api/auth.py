@@ -116,7 +116,7 @@ def send_confirmation_email(user, confirmation_code):
 def send_password_reset_email(user, reset_code):
     subject = 'Сброс пароля'
     message = f'Здравствуйте, {user.username}! Ваш код для сброса пароля: {reset_code}'
-    from_email = 'ExchangeWork'
+    from_email = 'ExchangeWork <aziretdzumabekov19@gmail.com>'
     recipient_list = [user.email]
 
     html_message = f'''
@@ -228,7 +228,6 @@ class ForgotPasswordAPI(APIView):
         except User.DoesNotExist:
             return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-
 class VerifyCodeAPI(APIView):
     permission_classes = [AllowAny]
 
@@ -308,16 +307,15 @@ class RegisterView(APIView):
             return Response({'message': 'User registered, please confirm your email'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class UserAuthentication(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
+        username = request.data.get('username')
         password = request.data.get('password')
 
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(username=username)
             if check_password(password, user.password):
                 refresh = RefreshToken.for_user(user)
                 return Response({
@@ -332,14 +330,21 @@ class UserAuthentication(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
 class UserLogOut(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        logout(request)
-        messages.success(request, "You have been logged out successfully.")
-        return Response({"message": "Logged out successfully."}, status=200)
+        refresh_token = request.data.get('refresh')
+
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+                return Response({"message": "Logged out successfully."}, status=status.HTTP_205_RESET_CONTENT)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
 
 class ConfirmEmailAPI(APIView):
     permission_classes = [AllowAny]
@@ -371,6 +376,9 @@ class ConfirmEmailAPI(APIView):
 
         except User.DoesNotExist:
             return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 class CustomBackend(BaseBackend):

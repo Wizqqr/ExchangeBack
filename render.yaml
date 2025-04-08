@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: exchange-api
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        value: your_secret_key
+      - key: POSTGRES_DB
+        value: yourdbname
+      - key: POSTGRES_USER
+        value: youruser
+      - key: POSTGRES_PASSWORD
+        value: yourpassword
+      - key: DB_HOST
+        value: your-database-service:5432 # replace later with actual PostgreSQL Render service hostname

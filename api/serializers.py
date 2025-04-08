@@ -1,4 +1,3 @@
-from rest_framework import serializers
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Event, Currency, User, UserCurrency

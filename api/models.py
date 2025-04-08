@@ -6,30 +6,8 @@ import string
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import BaseUserManager  # Add this import
 from django.utils import timezone
+from django.db.models import Sum, Avg, F, Q
 
-class Event(models.Model):
-    type = models.CharField(max_length=255)
-    currency = models.CharField(max_length=255)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    date = models.DateField()
-    time = models.TimeField(default=timezone.now)  # ⬅ автоматически текущее время
-    rate = models.DecimalField(max_digits=10, decimal_places=2)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def save(self, *args, **kwargs):
-        self.total = self.amount * self.rate  # автоматический расчет total
-        if not self.time:
-            self.time = timezone.now().time()
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.type} - {self.currency} ({self.date} {self.time})"
-
-    class Meta:
-        db_table = 'events'
-        verbose_name = 'Event'
-        verbose_name_plural = 'Events'
-        ordering = ['-date']
 
 class UserManager(models.Manager):
     def get_by_natural_key(self, email):
@@ -159,4 +137,67 @@ class UserCurrency(models.Model):
         verbose_name = 'User Currency'
         verbose_name_plural = 'User Currencies'
         unique_together = ('user', 'currency')
+
+class Event(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+
+    type = models.CharField(max_length=255)
+    currency = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+    time = models.TimeField(default=timezone.now)  # ⬅ автоматически текущее время
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        self.total = self.amount * self.rate  # автоматический расчет total
+        if not self.time:
+            self.time = timezone.now().time()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.type} - {self.currency} ({self.date} {self.time})"
+
+    class Meta:
+        db_table = 'events'
+        verbose_name = 'Event'
+        verbose_name_plural = 'Events'
+        ordering = ['-date']
+
+class UserCurrencySummary:
+    def __init__(self, user, currency_name):
+        self.user = user
+        self.currency_name = currency_name
+        self._calculate_summary()
+
+    def _calculate_summary(self):
+        # Получаем все события, связанные с этим пользователем и валютой
+        events = Event.objects.filter(currency=self.currency_name)
+
+        # Покупки
+        purchases = events.filter(type='purchase')
+        self.purchase_total = purchases.aggregate(total=Sum(F('amount') * F('rate')))['total'] or 0
+        self.purchase_count = purchases.aggregate(total=Sum('amount'))['total'] or 0
+        self.purchase_average = self.purchase_total / self.purchase_count if self.purchase_count else 0
+
+        # Продажи
+        sales = events.filter(type='sale')
+        self.sale_total = sales.aggregate(total=Sum(F('amount') * F('rate')))['total'] or 0
+        self.sale_count = sales.aggregate(total=Sum('amount'))['total'] or 0
+        self.sale_average = self.sale_total / self.sale_count if self.sale_count else 0
+
+        # Профит
+        self.profit = self.sale_total - self.purchase_total
+
+    def as_dict(self):
+        return {
+            'currency': self.currency_name,
+            'purchase_total': self.purchase_total,
+            'purchase_count': self.purchase_count,
+            'purchase_average': round(self.purchase_average, 2),
+            'sale_total': self.sale_total,
+            'sale_count': self.sale_count,
+            'sale_average': round(self.sale_average, 2),
+            'profit': round(self.profit, 2),
+        }
 

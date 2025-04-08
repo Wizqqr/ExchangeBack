@@ -1,17 +1,20 @@
 from rest_framework import generics
 import logging
-from django.contrib.auth.hashers import check_password
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Event, Currency, User, UserCurrency
+from .models import Event, Currency, User, UserCurrency, UserCurrencySummary
 from .serializers import EventSerializer, CurrencySerializer, UserSerializer, UserCurrencySerializer
 from django.shortcuts import render
 logger = logging.getLogger(__name__)
 import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font
-
 from django.http import HttpResponse
+from rest_framework.response import Response
+from rest_framework import status
+import logging
+logger = logging.getLogger(__name__)
+
 class EventList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Event.objects.all()
@@ -250,20 +253,6 @@ class UsersList(generics.ListCreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-class ClearAll(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        superAdminsList = User.objects.filter(is_superuser=True)
-        for superAdmin in superAdminsList:
-            if superAdmin.username == username and check_password(password, superAdmin.password):
-                Event.objects.all().delete()
-                return Response({"message": "Clear successful"}, status=status.HTTP_200_OK)
-        return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
-
 class UserCurrencyList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserCurrencySerializer
@@ -377,6 +366,21 @@ class UserOwnedCurrenciesView(generics.ListAPIView):
     def get_queryset(self):
         return Currency.objects.filter(user_rates__user=self.request.user).distinct()
 
+class ClearAll(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            user_currencies = UserCurrency.objects.filter(user=request.user)
+            user_currencies.delete()
+
+            Currency.objects.all().delete()
+
+            Event.objects.all().delete()
+
+            return Response({"message": "Все данные о валюте успешно очищены."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class ExportUserCurrenciesView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -447,12 +451,18 @@ class EventListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EventSerializer
 
     def get_queryset(self):
-        return Event.objects.all()
+        # Фильтруем события только для текущего пользователя
+        return Event.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Сохраняем объект с текущим пользователем
+        serializer.save(user=self.request.user)
 
     def post(self, request, *args, **kwargs):
+        # Здесь обработка POST-запроса для создания нового события
         serializer = EventSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            self.perform_create(serializer)  # Сохраняем с текущим пользователем
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -511,7 +521,26 @@ class ExportEventsView(generics.GenericAPIView):
         wb.save(response)
         return response
 
+class UserCurrencySummaryView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        # Получаем все события пользователя
+        user_events = Event.objects.filter(user=request.user)
+        print(f"Found {user_events.count()} events for user {request.user}")
+
+        # Получаем уникальные валюты
+        currencies = user_events.values_list('currency', flat=True).distinct()
+        print(f"Found currencies: {currencies}")
+
+        summary_list = []
+        for currency_name in currencies:
+            print(f"Processing currency: {currency_name}")
+            summary = UserCurrencySummary(request.user, currency_name)
+            summary_list.append(summary.as_dict())
+
+        print(f"Returning summary: {summary_list}")
+        return Response(summary_list)
 
 class isSuperAdmin(APIView):
     permission_classes = [IsAuthenticated]
@@ -526,17 +555,8 @@ class isSuperAdmin(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"error": "Not superadmin"}, status=status.HTTP_400_BAD_REQUEST)
 
-
-
 class testRenderResetTemplateUi(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         return render(request, 'password_reset_confirm.html', {'validlink': True, 'uidb64': 'uidb64', 'token': 'token'})
-from rest_framework.response import Response
-from django.contrib.auth.models import User
-from rest_framework import status
-import logging
-logger = logging.getLogger(__name__)
-
-
