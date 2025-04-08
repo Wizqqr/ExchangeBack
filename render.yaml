@@ -8,25 +8,25 @@ services:
 
     envVars:
       - key: DJANGO_SECRET_KEY
-        value: your_super_secret_key_here
+        value: django-insecure-t!71*t*d_#@(fv11skv2wtsqp5w1jxz%ujg+4)p!m76)14sn42
 
       - key: DEBUG
-        value: "False"
+        value: "True"
 
       - key: POSTGRES_DB
-        value: exchangedb
+        value: exchangedb_pls0
 
       - key: POSTGRES_USER
         value: aziret
 
       - key: POSTGRES_PASSWORD
-        value: Aziret7bklass
+        value: WYU1y5IdmKlhoNqxv9eBI0rk7Sqikec1
 
       - key: DB_HOST
-        value: <RENDER_DB_INTERNAL_HOSTNAME>
+        value: dpg-cvqlse6uk2gs73cjenrg-a.oregon-postgres.render.com
 
       - key: DB_PORT
         value: 5432
 
       - key: ALLOWED_HOSTS
-        value: your_render_service_name.onrender.com
+        value: exchangeback.onrender.com
