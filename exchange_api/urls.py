@@ -22,7 +22,7 @@ urlpatterns = [
     path('api/v1/events', EventList.as_view()),
     path('api/v1/register', RegisterView.as_view(), name='register'),
     path('api/v1/events/<int:pk>', EventList.as_view(), name='event-detail'),
-    path('api/v1/currencies', CurrencyList.as_view()),
+    path('api/v1/currencies', CurrencyList.as_view(), name='currency'),
     path('api/v1/currencies/<str:currency_name>', CurrencyList.as_view(), name='currency-detail'),
     path('api/v1/authenticate', UserAuthentication.as_view()),
     path('api/v1/confirm-email', ConfirmEmailAPI.as_view(), name='confirm_email'),

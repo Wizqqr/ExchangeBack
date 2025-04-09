@@ -86,11 +86,41 @@ class EventList(generics.ListCreateAPIView):
 
 class CurrencyList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = CurrencySerializer
+
     def get_queryset(self):
         if self.request.method == 'GET':
-            return Currency.objects.values('name')
+            return Currency.objects.values('name', 'rate_to_som')
         return Currency.objects.all()
-    serializer_class = CurrencySerializer
+
+    def post(self, request, *args, **kwargs):
+        currency_name = request.data.get('name')
+        rate_to_som = request.data.get('rate_to_som')
+
+        if not currency_name:
+            return Response(
+                {"error": "Currency name is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            if Currency.objects.filter(name=currency_name).exists():
+                return Response(
+                    {"error": "Currency already exists"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            currency = Currency.objects.create(
+                name=currency_name,
+                rate_to_som=rate_to_som
+            )
+            serializer = self.get_serializer(currency)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Error creating currency: {str(e)}")
+            return Response(
+                {"error": "Failed to create currency"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def delete(self, request, *args, **kwargs):
         currency_name = request.data.get('name')
@@ -101,22 +131,26 @@ class CurrencyList(generics.ListCreateAPIView):
         except Currency.DoesNotExist:
             logger.error(f"Currency with name {currency_name} not found")
             return Response(
-            {"error": "Currency not found"},
-            status=status.HTTP_404_NOT_FOUND
+                {"error": "Currency not found"},
+                status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             logger.error(f"Error deleting currency: {str(e)}")
             return Response(
-            {"error": "Failed to delete currency"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to delete currency"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def put(self, request, *args, **kwargs):
         currency_name = request.data.get('newName')
         currency_old_name = request.data.get('oldName')
+        new_rate = request.data.get('rate_to_som')  # опционально обновляем курс
+
         try:
             currency = Currency.objects.get(name=currency_old_name)
             currency.name = currency_name
+            if new_rate is not None:
+                currency.rate_to_som = new_rate
             currency.save()
             return Response(status=status.HTTP_200_OK)
         except Currency.DoesNotExist:
@@ -128,7 +162,7 @@ class CurrencyList(generics.ListCreateAPIView):
             logger.error(f"Error updating currency: {str(e)}")
             return Response(
                 {"error": "Failed to update currency"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 class UsersList(generics.ListCreateAPIView):
@@ -314,6 +348,7 @@ class UserCurrencyList(generics.ListCreateAPIView):
             sale_count=sale_count
         )
         user_currency.save()
+        print(request.data)
 
         return Response(UserCurrencySerializer(user_currency).data, status=status.HTTP_201_CREATED)
 
