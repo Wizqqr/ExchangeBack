@@ -11,7 +11,7 @@ services:
         value: django-insecure-t!71*t*d_#@(fv11skv2wtsqp5w1jxz%ujg+4)p!m76)14sn42
 
       - key: DEBUG
-        value: "True"
+        value: "False"
 
       - key: POSTGRES_DB
         value: exchangedb_pls0
