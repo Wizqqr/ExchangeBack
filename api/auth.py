@@ -11,23 +11,14 @@ from django.contrib.auth.hashers import check_password
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from django.core.mail import send_mail
-from django.conf import settings
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.shortcuts import render
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .models import User
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth import logout
-
-from .serializers import EventSerializer, CurrencySerializer, UserSerializer
-from twilio.rest import Client
 from rest_framework_simplejwt.tokens import RefreshToken
 import random
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 logger = logging.getLogger(__name__)
-# Create your views here.
-from django.contrib.auth.tokens import default_token_generator
 
 def generate_confirmation_code():
     return ''.join(random.choices('0123456789', k=6))
@@ -307,6 +298,7 @@ class RegisterView(APIView):
             return Response({'message': 'User registered, please confirm your email'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class UserAuthentication(APIView):
     permission_classes = [AllowAny]
 
@@ -318,11 +310,17 @@ class UserAuthentication(APIView):
             user = User.objects.get(username=username)
             if check_password(password, user.password):
                 refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+
+                # Проверка на срок действия access_token (не обязательная, так как уже проверяется в middleware)
+                if JwtDecoder.isExpired(access_token):  # Если токен истек
+                    return Response({"error": "Token expired"}, status=status.HTTP_401_UNAUTHORIZED)
+
                 return Response({
                     "message": "Authentication successful",
                     "tokens": {
                         "refresh": str(refresh),
-                        "access": str(refresh.access_token),
+                        "access": access_token,
                     }
                 }, status=status.HTTP_200_OK)
             else:
@@ -341,11 +339,10 @@ class UserLogOut(APIView):
                 token = RefreshToken(refresh_token)
                 token.blacklist()
                 return Response({"message": "Logged out successfully."}, status=status.HTTP_205_RESET_CONTENT)
-            except Exception as e:
+            except TokenError as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
-
 class ConfirmEmailAPI(APIView):
     permission_classes = [AllowAny]
 
@@ -376,10 +373,6 @@ class ConfirmEmailAPI(APIView):
 
         except User.DoesNotExist:
             return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
 
 class CustomBackend(BaseBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
