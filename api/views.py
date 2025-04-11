@@ -14,6 +14,8 @@ from rest_framework.response import Response
 from rest_framework import status
 import logging
 logger = logging.getLogger(__name__)
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 class EventList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -595,3 +597,13 @@ class testRenderResetTemplateUi(APIView):
 
     def get(self, request, *args, **kwargs):
         return render(request, 'password_reset_confirm.html', {'validlink': True, 'uidb64': 'uidb64', 'token': 'token'})
+
+class CustomTokenRefreshView(TokenRefreshView):
+    serializer_class = TokenRefreshSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        # Можешь логировать или добавлять свои поля в ответ:
+        response.data['message'] = 'Токен успешно обновлён'
+        return response

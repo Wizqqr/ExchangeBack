@@ -330,8 +330,25 @@ class UserAuthentication(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+# class UserLogOut(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def post(self, request, *args, **kwargs):
+#         refresh_token = request.data.get('refresh')
+#
+#         if refresh_token:
+#             try:
+#                 token = RefreshToken(refresh_token)
+#                 token.blacklist()
+#                 return Response({"message": "Logged out successfully."}, status=status.HTTP_205_RESET_CONTENT)
+#             except Exception as e:
+#                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#         else:
+#             return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class UserLogOut(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # <- убрано
 
     def post(self, request, *args, **kwargs):
         refresh_token = request.data.get('refresh')
@@ -345,6 +362,7 @@ class UserLogOut(APIView):
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ConfirmEmailAPI(APIView):
     permission_classes = [AllowAny]
