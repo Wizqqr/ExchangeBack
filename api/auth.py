@@ -229,11 +229,7 @@ class VerifyCodeAPI(APIView):
             return Response({"message": "Reset code is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Ищем пользователя по коду сброса
             user = User.objects.get(reset_code=reset_code)
-
-            # Сохраняем код сброса в сессии
-            request.session['reset_code'] = reset_code
 
             return Response({"message": "Code is valid, you can now reset your password."}, status=status.HTTP_200_OK)
 
@@ -257,12 +253,11 @@ class ResetPasswordAPI(APIView):
         if new_password != confirm_password:
             return Response({"message": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Извлекаем код сброса из сессии пользователя
-        reset_code = request.session.get('reset_code')
+        # Получаем код сброса из запроса
+        reset_code = request.data.get('reset_code')
 
         if not reset_code:
-            return Response({"message": "Reset code not found. Please request a password reset again."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Reset code is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Ищем пользователя с этим кодом сброса
@@ -272,9 +267,6 @@ class ResetPasswordAPI(APIView):
             user.set_password(new_password)
             user.reset_code = None  # Очищаем код сброса после использования
             user.save()  # Сохраняем изменения в базе данных
-
-            # Удаляем код сброса из сессии после успешного обновления
-            del request.session['reset_code']
 
             return Response({"message": "Password has been successfully reset."}, status=status.HTTP_200_OK)
 
