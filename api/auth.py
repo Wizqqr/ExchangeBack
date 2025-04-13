@@ -304,10 +304,6 @@ class UserAuthentication(APIView):
                 refresh = RefreshToken.for_user(user)
                 access_token = str(refresh.access_token)
 
-                # Проверка на срок действия access_token (не обязательная, так как уже проверяется в middleware)
-                if JwtDecoder.isExpired(access_token):  # Если токен истек
-                    return Response({"error": "Token expired"}, status=status.HTTP_401_UNAUTHORIZED)
-
                 return Response({
                     "message": "Authentication successful",
                     "tokens": {
