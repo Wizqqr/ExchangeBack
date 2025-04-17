@@ -347,17 +347,15 @@ class ConfirmEmailAPI(APIView):
             # Ищем пользователя по email
             user = User.objects.get(email=email)
 
-            # Проверяем, совпадает ли код подтверждения
-            if user.confirmation_code == confirmation_code:
-                # Если код правильный, активируем email пользователя
+            if str(user.confirmation_code).strip() == str(confirmation_code).strip():
                 user.email_confirmed = True
-                user.confirmation_code = None  # Очищаем код после подтверждения
+                user.confirmation_code = None
                 user.save()
-
                 return Response({"message": "Your email has been confirmed! You can now log in."},
                                 status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Invalid confirmation code."}, status=status.HTTP_400_BAD_REQUEST)
+
 
         except User.DoesNotExist:
             return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
