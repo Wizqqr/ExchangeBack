@@ -1,4 +1,7 @@
 from django.contrib.auth.backends import BaseBackend
+from django.core.exceptions import ObjectDoesNotExist
+from twilio.base.obsolete import ObsoleteException
+
 from .serializers import RegisterSerializer
 import logging
 from django.views.decorators.csrf import csrf_exempt
@@ -290,6 +293,27 @@ class RegisterView(APIView):
             return Response({'message': 'User registered, please confirm your email'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class ResendCode(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        email = request.data.get('email')
+
+        if not email:
+            return Response({"message": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except ObjectDoesNotExist:
+            return Response({"message": "User with this email not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        confirmation_code = generate_confirmation_code()
+        user.confirmation_code = confirmation_code
+        user.save()
+
+        send_confirmation_email(user, confirmation_code)
+
+        return Response({"message": "The code has been sent."}, status=status.HTTP_200_OK)
+
 
 class UserAuthentication(APIView):
     permission_classes = [AllowAny]
@@ -331,11 +355,11 @@ class UserLogOut(APIView):
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
 class ConfirmEmailAPI(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # Получаем email и код подтверждения из запроса
         email = request.data.get('email')
         confirmation_code = request.data.get('confirmation_code')
 

@@ -10,7 +10,9 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from api.auth import RegisterView, confirm_email_view, ConfirmEmailAPI, ForgotPasswordAPI, ResetPasswordAPI, UserAuthentication, UserLogOut, VerifyCodeAPI
+from api.auth import (RegisterView, confirm_email_view, ConfirmEmailAPI,
+                      ForgotPasswordAPI, ResetPasswordAPI,
+                      UserAuthentication, UserLogOut, VerifyCodeAPI, ResendCode)
 
 from api.serializers import CustomTokenObtainPairSerializer
 
@@ -21,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/events', EventList.as_view()),
     path('api/v1/register', RegisterView.as_view(), name='register'),
+    path('api/v1/resend', ResendCode.as_view(), name='resend'),
     path('api/v1/events/<int:pk>', EventList.as_view(), name='event-detail'),
     path('api/v1/currencies', CurrencyList.as_view(), name='currency'),
     path('api/v1/currencies/<str:currency_name>', CurrencyList.as_view(), name='currency-detail'),
