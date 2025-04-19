@@ -58,7 +58,7 @@ class EventSerializer(serializers.ModelSerializer):
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
-        fields = ['id', 'name', 'rate_to_som']
+        fields = ['id', 'name', 'rate_to_som', 'owner']
 
     
 class UserSerializer(serializers.ModelSerializer):

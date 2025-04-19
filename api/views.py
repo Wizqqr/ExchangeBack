@@ -86,18 +86,20 @@ class EventList(generics.ListCreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
 class CurrencyList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CurrencySerializer
 
     def get_queryset(self):
         if self.request.method == 'GET':
-            return Currency.objects.values('name', 'rate_to_som')
+            return Currency.objects.values('name', 'rate_to_som', 'owner')
         return Currency.objects.all()
 
     def post(self, request, *args, **kwargs):
         currency_name = request.data.get('name')
         rate_to_som = request.data.get('rate_to_som')
+        owner = request.user  # ← here we set the owner to the current logged-in user
 
         if not currency_name:
             return Response(
@@ -113,7 +115,8 @@ class CurrencyList(generics.ListCreateAPIView):
                 )
             currency = Currency.objects.create(
                 name=currency_name,
-                rate_to_som=rate_to_som
+                rate_to_som=rate_to_som,
+                owner=owner  # Store the owner of the currency
             )
             serializer = self.get_serializer(currency)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -128,6 +131,14 @@ class CurrencyList(generics.ListCreateAPIView):
         currency_name = request.data.get('name')
         try:
             currency = Currency.objects.get(name=currency_name)
+
+            # Check if the current user is the owner of the currency
+            if currency.owner != request.user:
+                return Response(
+                    {"error": "You can only delete your own currencies."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
             currency.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Currency.DoesNotExist:
@@ -146,10 +157,18 @@ class CurrencyList(generics.ListCreateAPIView):
     def put(self, request, *args, **kwargs):
         currency_name = request.data.get('newName')
         currency_old_name = request.data.get('oldName')
-        new_rate = request.data.get('rate_to_som')  # опционально обновляем курс
+        new_rate = request.data.get('rate_to_som')  # Optionally update rate
 
         try:
             currency = Currency.objects.get(name=currency_old_name)
+
+            # Check if the current user is the owner of the currency
+            if currency.owner != request.user:
+                return Response(
+                    {"error": "You can only update your own currencies."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
             currency.name = currency_name
             if new_rate is not None:
                 currency.rate_to_som = new_rate
@@ -166,6 +185,7 @@ class CurrencyList(generics.ListCreateAPIView):
                 {"error": "Failed to update currency"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 class UsersList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]

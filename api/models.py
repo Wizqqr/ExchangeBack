@@ -102,6 +102,7 @@ class User(models.Model):
 class Currency(models.Model):
     name = models.CharField(max_length=10)
     rate_to_som = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # цена от юзера
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_currencies", null=True, blank=True)
 
     def __str__(self):
         return self.name
