@@ -314,9 +314,6 @@ class ResendCode(APIView):
 
         return Response({"message": "The code has been sent."}, status=status.HTTP_200_OK)
 
-class Check(APIView):
-    reset=send_password_reset_email()
-
 
 class UserAuthentication(APIView):
     permission_classes = [AllowAny]
